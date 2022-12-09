@@ -2,11 +2,6 @@
 var bombImage = '<img src="images/bomb.png">';
 var flagImage = '<img src="images/flag.png">';
 var wrongBombImage = '<img src="images/wrong-bomb.png">'
-var sizeLookup = {
-  '5': { totalBombs: 5, tableWidth: '245px' },
-  '16': { totalBombs: 40, tableWidth: '420px' },
-  '30': { totalBombs: 160, tableWidth: '794px' }
-};
 var colors = [
   '',
   '#0000FA',
@@ -33,12 +28,6 @@ var winner;
 /*----- cached element references -----*/
 var boardEl = document.getElementById('board');
 
-/*----- event listeners -----*/
-document.getElementById('size-btns').addEventListener('click', function (e) {
-  size = parseInt(e.target.id.replace('size-', ''));
-  init();
-  render();
-});
 
 boardEl.addEventListener('click', function (e) {
   if (winner || hitBomb) return;
@@ -49,7 +38,6 @@ boardEl.addEventListener('click', function (e) {
     var row = parseInt(clickedEl.dataset.row);
     var col = parseInt(clickedEl.dataset.col);
     var cell = board[row][col];
-    console.log(cell)
     if (e.shiftKey && !cell.revealed && bombCount > 0) {
       bombCount += cell.flag() ? -1 : 1;
     } else {
@@ -91,19 +79,19 @@ function revealAll() {
 function buildTable() {
   var topRow = `
   <tr>
-    <td class="menu" id="window-title-bar" colspan="${size}">
+    <td class="menu" id="window-title-bar" colspan="${5}">
       <div id="window-title"><img src="images/mine-menu-icon.png"> Minesweeper</div>
       <div id="window-controls"><img src="images/window-controls.png"></div>
     </td>
   <tr>
-    <td class="menu" id="folder-bar" colspan="${size}">
+    <td class="menu" id="folder-bar" colspan="${5}">
       <div id="folder1"><a href="https://github.com/nickarocho/minesweeper/blob/master/readme.md" target="blank">Read Me </a></div>
       <div id="folder2"><a href="https://github.com/nickarocho/minesweeper" target="blank">Source Code</a></div>
     </td>
   </tr>
   </tr>
     <tr>
-      <td class="menu" colspan="${size}">
+      <td class="menu" colspan="${5}">
           <section id="status-bar">
             <div id="bomb-counter">000</div>
             <div id="reset"><img src="images/smiley-face.png"></div>
@@ -113,7 +101,7 @@ function buildTable() {
     </tr>
     `;
   boardEl.innerHTML = topRow + `<tr>${'<td class="game-cell"></td>'.repeat(size)}</tr>`.repeat(size);
-  boardEl.style.width = sizeLookup[size].tableWidth;
+  boardEl.style.width = 5;
   createResetListener();
   var cells = Array.from(document.querySelectorAll('td:not(.menu)'));
   cells.forEach(function (cell, idx) {
@@ -130,15 +118,18 @@ function buildArrays() {
   return arr;
 };
 
-function buildCells() {
+async function buildCells() {
   board.forEach(function (rowArr, rowIdx) {
     rowArr.forEach(function (slot, colIdx) {
       board[rowIdx][colIdx] = new Cell(rowIdx, colIdx, board);
     });
   });
-  addBombs();
-  runCodeForAllCells(function (cell) {
-    cell.calcAdjBombs();
+  await addBombs();
+  board.forEach(function (rowArr, rowIdx) {
+    rowArr.forEach(function (slot, colIdx) {
+      board[rowIdx][colIdx].calcAdjBombs()
+      console.log(board[rowIdx][colIdx].adjBombs)
+    });
   });
 };
 
@@ -165,8 +156,10 @@ function getBombCount() {
 };
 
 async function addBombs() {
+  var input = prompt('insert english character').toUpperCase()
   var map;
-  map = await fetch("../maps/A.json")
+  this.bombCount = 0
+  map = await fetch(`../maps/${input[0]}.json`)
     .then(response => response.json())
     .then(data => map = data)
     .catch(error => console.log(error));
@@ -174,21 +167,14 @@ async function addBombs() {
   map.forEach((row, rowNum) => {
     row.forEach((isBomb, cellNum) => {
       var currentCell = board[rowNum][cellNum]
-      currentCell.bomb = isBomb;
+      isBomb ? currentCell.bomb = true : currentCell.bomb = false
+      if (isBomb) {
+        this.bombCount++;
+      }
     })
   })
 }
 
-// var currentTotalBombs = sizeLookup[`${size}`].totalBombs;
-// while (currentTotalBombs !== 0) {
-//   var row = Math.floor(Math.random() * size);
-//   var col = Math.floor(Math.random() * size);
-//   var currentCell = board[row][col]
-//   if (!currentCell.bomb) {
-//     currentCell.bomb = true
-//     currentTotalBombs -= 1
-//   }
-// }
 
 function getWinner() {
   for (var row = 0; row < board.length; row++) {
@@ -201,7 +187,7 @@ function getWinner() {
 };
 
 function render() {
-  document.getElementById('bomb-counter').innerText = bombCount.toString().padStart(3, '0');
+  document.getElementById('bomb-counter').innerText = this.bombCount.toString().padStart(3, '0');
   var seconds = timeElapsed % 60;
   var tdList = Array.from(document.querySelectorAll('[data-row]'));
   tdList.forEach(function (td) {
