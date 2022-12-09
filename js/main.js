@@ -156,7 +156,7 @@ function getBombCount() {
 };
 
 async function addBombs() {
-  var input = prompt('insert english character').toUpperCase()
+  var input = prompt('Insert English character').toUpperCase()
   var map;
   this.bombCount = 0
   map = await fetch(`../maps/${input[0]}.json`)
